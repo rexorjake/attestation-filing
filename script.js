@@ -1,6 +1,6 @@
 // =================== CONFIGURATION ===================
 // PASTE YOUR API URL FROM THE APPS SCRIPT DEPLOYMENT STEP HERE
-const API_URL = 'https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxs-xvnoGdqfNNGQFBcdvDPLC77Lk6YUzGHhOeq9-UtVDkzpluNqlJpQq0WkngauQkt/exec';
 
 // =================== GLOBAL VARIABLES ===================
 let allNames = [];

@@ -1,4 +1,5 @@
 // =================== CONFIGURATION ===================
+// PASTE YOUR API URL FROM THE APPS SCRIPT DEPLOYMENT STEP HERE
 const API_URL = 'https://script.google.com/macros/s/AKfycbxs-xvnoGdqfNNGQFBcdvDPLC77Lk6YUzGHhOeq9-UtVDkzpluNqlJpQq0WkngauQkt/exec';
 
 // =================== GLOBAL VARIABLES ===================
@@ -6,24 +7,20 @@ let allNames = [];
 let selectedIndex = -1;
 let currentRecordName = '';
 
-// =================== API CALLING FUNCTIONS ===================
-
-// Function to call the API
+// =================== API CALLING FUNCTION ===================
+// This function is modified to handle the HTML-wrapped JSON response from Apps Script.
 async function callApi(path, method = 'GET', data = null) {
-  let url = `${API_URL}?path=${path}`;
+  const url = new URL(API_URL);
+  url.searchParams.append('path', path);
+
   const options = {
     method: method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
   };
 
   if (method === 'GET' && data) {
-    // For GET requests, add data as URL query parameters
-    const params = new URLSearchParams(data);
-    url += `&${params.toString()}`;
+    Object.keys(data).forEach(key => url.searchParams.append(key, data[key]));
   } else if (method === 'POST' && data) {
-    // For POST requests, add data to the request body
     options.body = JSON.stringify(data);
   }
 
@@ -31,21 +28,27 @@ async function callApi(path, method = 'GET', data = null) {
 
   try {
     const response = await fetch(url, options);
-    if (!response.ok) {
-      // If the server response is not OK, throw an error with the status text
-      throw new Error(`Server error: ${response.status} ${response.statusText}`);
-    }
-    const responseData = await response.json();
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    
+    // The response is now HTML, so we get it as text
+    const responseText = await response.text();
+    
+    // We extract the JSON from inside the <script> tag
+    const jsonString = responseText.match(/<script>(.*?)<\/script>/)[1];
+    
+    const responseData = JSON.parse(jsonString);
     console.log('API Response:', responseData); // Debugging log
     return responseData;
   } catch (error) {
-    console.error('API call failed:', error); // More detailed error log
-    // Re-throw the error to be caught by the calling function
-    throw error;
+    console.error('API Call Failed:', error);
+    // Show a more user-friendly error on the page
+    showResults([{ error: `Connection failed: ${error.message}. Check console.` }]);
+    throw error; // Re-throw to stop further processing
   }
 }
 
-// Modified functions to use the API
+// =================== MODIFIED FUNCTIONS USING THE API ===================
+
 function performSearch() {
   const searchTerm = document.getElementById('searchInput').value.trim();
   if (!searchTerm) {
@@ -57,7 +60,7 @@ function performSearch() {
   
   callApi('search', 'GET', { term: searchTerm })
     .then(data => showResults(data))
-    .catch(error => showResults([{error: "Failed to connect to the server. Check the console for details."}]));
+    .catch(error => console.error('Search failed:', error)); // Error is already shown in callApi
 }
 
 function submitPullOutForm() {
@@ -88,10 +91,7 @@ function submitPullOutForm() {
         performSearch();
       }
     })
-    .catch(error => {
-      alert('Failed to connect to the server. Check the console for details.');
-      console.error(error);
-    })
+    .catch(error => console.error('Pull Out failed:', error))
     .finally(() => {
       submitButton.textContent = originalText;
       submitButton.disabled = false;
@@ -125,10 +125,7 @@ function submitReturnForm() {
         performSearch();
       }
     })
-    .catch(error => {
-      alert('Failed to connect to the server. Check the console for details.');
-      console.error(error);
-    })
+    .catch(error => console.error('Return failed:', error))
     .finally(() => {
       submitButton.textContent = originalText;
       submitButton.disabled = false;
@@ -157,10 +154,7 @@ function submitNoteForm() {
         performSearch();
       }
     })
-    .catch(error => {
-      alert('Failed to connect to the server. Check the console for details.');
-      console.error(error);
-    })
+    .catch(error => console.error('Save Note failed:', error))
     .finally(() => {
       submitButton.textContent = originalText;
       submitButton.disabled = false;
@@ -176,10 +170,7 @@ function deleteNote(name) {
         performSearch();
       }
     })
-    .catch(error => {
-      alert('Failed to connect to the server. Check the console for details.');
-      console.error(error);
-    });
+    .catch(error => console.error('Delete Note failed:', error));
 }
 
 
@@ -194,9 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
         allNames = response.names || [];
       }
     })
-    .catch(error => {
-      console.error('Failed to load suggestions:', error);
-    });
+    .catch(error => console.error('Failed to load suggestions:', error));
 
   // Set up event listeners
   document.getElementById('searchButton').addEventListener('click', performSearch);
@@ -234,9 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// =================== PASTE ALL YOUR OTHER JAVASCRIPT FUNCTIONS HERE ===================
-// Copy all your remaining functions from your original script.
-// These functions do not need to be changed as they only manipulate the UI.
+// =================== UI FUNCTIONS (NO CHANGES NEEDED) ===================
 
 function showResults(response) {
   var container = document.getElementById('resultsContainer');

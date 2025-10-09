@@ -1,23 +1,28 @@
 // =================== CONFIGURATION ===================
-const API_URL = 'https://script.google.com/macros/s/AKfycbzZ680q14qizbnWe9mx0GoWM8r8_uNfunLttSEeyfoGd7jNyC1ORHdM54siDPYQ2clpkA/exec';
+// PASTE YOUR APPS SCRIPT WEB APP URL HERE
+const API_URL = 'https://script.google.com/macros/s/AKfycbxscGidMS41AAj5BGd_N0KwhYPk7Ty_dozjmU5oUCZ6PpKFMp_P6kjf6elr0xXpBfkkHA/exec';
 
 // =================== GLOBAL VARIABLES ===================
 let allNames = [];
 let selectedIndex = -1;
 let currentRecordName = '';
 
-// =================== API CALLING FUNCTION (FIXED) ===================
+// =================== API CALLING FUNCTION ===================
 async function callApi(path, method = 'GET', data = null) {
   let url = `${API_URL}?path=${path}`;
+  
   if (method === 'GET' && data) {
     for (const key in data) {
       url += `&${key}=${encodeURIComponent(data[key])}`;
     }
   }
   
-  const options = { 
+  const options = {
     method: method,
-    headers: { 'Content-Type': 'application/json' }
+    mode: 'cors',
+    headers: {
+      'Content-Type': 'application/json',
+    }
   };
   
   if (method === 'POST' && data) {
@@ -26,30 +31,36 @@ async function callApi(path, method = 'GET', data = null) {
   
   try {
     const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
     
-    // FIXED: Now properly handling JSON response
-    const jsonData = await response.json();
-    return jsonData;
-    
+    const responseData = await response.json();
+    return responseData;
   } catch (error) {
     console.error('API Call Failed:', error);
-    showResults([{ error: `Connection failed: ${error.message}. Check console.` }]);
+    showResults({ error: `Connection failed: ${error.message}` });
     throw error;
   }
 }
 
-// =================== SEARCH & FORM FUNCTIONS ===================
+// =================== SEARCH FUNCTIONS ===================
 function performSearch() {
   const searchTerm = document.getElementById('searchInput').value.trim();
-  if (!searchTerm) return showResults([{ error: "Please enter a name to search" }]);
+  if (!searchTerm) {
+    showResults({ error: "Please enter a name to search" });
+    return;
+  }
+  
   hideAutocomplete();
   showLoading();
+  
   callApi('search', 'GET', { term: searchTerm })
     .then(data => showResults(data))
     .catch(error => console.error('Search failed:', error));
 }
 
+// =================== FORM SUBMIT FUNCTIONS ===================
 function submitPullOutForm() {
   const formData = {
     name: document.getElementById('pullOutName').value,
@@ -61,7 +72,8 @@ function submitPullOutForm() {
   };
   
   if (!formData.pulledOutBy || !formData.date || !formData.personInCharge) {
-    return alert('Please fill in all required fields');
+    alert('Please fill in all required fields');
+    return;
   }
   
   const submitButton = document.querySelector('#pullOutForm button[type="submit"]');
@@ -90,13 +102,14 @@ function submitReturnForm() {
   const formData = {
     name: document.getElementById('returnName').value,
     action: 'Return',
-    pulledOutBy: document.getElementById('returnedBy').value,
+    returnedBy: document.getElementById('returnedBy').value,
     date: document.getElementById('returnDate').value,
     remarks: document.getElementById('returnRemarks').value
   };
   
-  if (!formData.pulledOutBy || !formData.date) {
-    return alert('Please fill in all required fields');
+  if (!formData.returnedBy || !formData.date) {
+    alert('Please fill in all required fields');
+    return;
   }
   
   const submitButton = document.querySelector('#returnForm button[type="submit"]');
@@ -125,7 +138,10 @@ function submitNoteForm() {
   const name = document.getElementById('noteName').value;
   const noteText = document.getElementById('noteText').value;
   
-  if (!noteText) return alert('Please enter a note');
+  if (!noteText) {
+    alert('Please enter a note');
+    return;
+  }
   
   const submitButton = document.querySelector('#noteForm button[type="submit"]');
   const originalText = submitButton.textContent;
@@ -162,7 +178,7 @@ function deleteNote(name) {
     .catch(error => console.error('Delete Note failed:', error));
 }
 
-// =================== INITIALIZATION (FIXED) ===================
+// =================== INITIALIZATION ===================
 document.addEventListener('DOMContentLoaded', function() {
   // Load suggestions
   callApi('getSuggestions', 'GET')
@@ -175,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => console.error('Failed to load suggestions:', error));
   
-  // FIXED: Check if elements exist before adding listeners
+  // Check if elements exist before adding event listeners
   const searchButton = document.getElementById('searchButton');
   if (searchButton) {
     searchButton.addEventListener('click', performSearch);
@@ -201,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
+    // Debounced autocomplete
     let debounceTimer;
     searchInput.addEventListener('input', function() {
       clearTimeout(debounceTimer);
@@ -215,6 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Close autocomplete on outside click
   document.addEventListener('click', function(e) {
     if (!e.target.closest('.autocomplete-container')) {
       hideAutocomplete();
@@ -248,201 +266,260 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Set default dates
   const pullOutDate = document.getElementById('pullOutDate');
-  if (pullOutDate) pullOutDate.valueAsDate = new Date();
+  if (pullOutDate) {
+    pullOutDate.valueAsDate = new Date();
+  }
   
   const returnDate = document.getElementById('returnDate');
-  if (returnDate) returnDate.valueAsDate = new Date();
+  if (returnDate) {
+    returnDate.valueAsDate = new Date();
+  }
 });
 
 // =================== UI FUNCTIONS ===================
 function showResults(response) {
-  var container = document.getElementById('resultsContainer');
+  const container = document.getElementById('resultsContainer');
   if (!container) return;
   
   container.innerHTML = '';
   
+  const resultsCount = document.getElementById('resultsCount');
+  const sheetInfo = document.getElementById('sheetInfo');
+  
   if (response.error) {
     container.innerHTML = '<div class="error-message"><span class="material-icons">error</span> ' + response.error + '</div>';
-    document.getElementById('resultsCount').style.display = 'none';
-    document.getElementById('sheetInfo').textContent = '';
+    if (resultsCount) resultsCount.style.display = 'none';
+    if (sheetInfo) sheetInfo.textContent = '';
     return;
   }
   
-  if (response.sheetName) {
-    document.getElementById('sheetInfo').textContent = 'Sheet: ' + response.sheetName;
+  if (response.sheetName && sheetInfo) {
+    sheetInfo.textContent = 'Sheet: ' + response.sheetName;
   }
   
   if (!response.results || response.results.length === 0) {
-    container.innerHTML = `<div class="no-results"><div class="no-results-icon"><span class="material-icons" style="font-size: 64px;">find_in_page</span></div><div class="no-results-text">No records found matching your search.</div></div>`;
-    document.getElementById('resultsCount').style.display = 'none';
+    container.innerHTML = `
+      <div class="no-results">
+        <div class="no-results-icon">
+          <span class="material-icons" style="font-size: 64px;">find_in_page</span>
+        </div>
+        <div class="no-results-text">No records found matching your search.</div>
+      </div>
+    `;
+    if (resultsCount) resultsCount.style.display = 'none';
     return;
   }
   
-  document.getElementById('resultsCount').textContent = response.results.length;
-  document.getElementById('resultsCount').style.display = 'inline-block';
+  if (resultsCount) {
+    resultsCount.textContent = response.results.length;
+    resultsCount.style.display = 'inline-block';
+  }
   
   response.results.forEach(function(record) {
-    var recordDiv = document.createElement('div');
-    recordDiv.className = 'record-card';
-    if (record.Status === "Pulled Out") recordDiv.classList.add('pulled-out');
-    
-    var headerDiv = document.createElement('div');
-    headerDiv.className = 'record-header';
-    
-    var nameDiv = document.createElement('div');
-    nameDiv.className = 'record-name';
-    nameDiv.innerHTML = `<span class="material-icons">person</span> ${record.Name || 'Unnamed Record'}`;
-    if (record.Position) nameDiv.innerHTML += `<span class="position-badge">${record.Position}</span>`;
-    
-    var statusDiv = document.createElement('div');
-    if (record.Status === "Pulled Out") {
-      statusDiv.className = 'status-badge status-pulled-out';
-      statusDiv.innerHTML = '<span class="material-icons">folder_open</span> Pulled Out';
-    } else {
-      statusDiv.className = 'status-badge status-in-filing';
-      statusDiv.innerHTML = '<span class="material-icons">folder</span> In Filing';
-    }
-    
-    headerDiv.appendChild(nameDiv);
-    headerDiv.appendChild(statusDiv);
-    recordDiv.appendChild(headerDiv);
-    
-    var detailsDiv = document.createElement('div');
-    detailsDiv.className = 'record-details';
-    
-    const orderedFields = ['Storage Area', 'Level', 'Partition'];
-    orderedFields.forEach(function(fieldName) {
-      if (record[fieldName]) {
-        var itemDiv = document.createElement('div');
-        itemDiv.className = 'detail-item';
-        var labelDiv = document.createElement('div');
-        labelDiv.className = 'detail-label';
-        labelDiv.textContent = fieldName;
-        var valueDiv = document.createElement('div');
-        valueDiv.className = 'detail-value';
-        if (fieldName === 'Storage Area') {
-          valueDiv.innerHTML = `<span class="storage-badge"><span class="material-icons" style="font-size: 16px; vertical-align: middle;">inventory_2</span> ${record[fieldName]}</span>`;
-        } else {
-          valueDiv.textContent = record[fieldName];
-        }
-        itemDiv.appendChild(labelDiv);
-        itemDiv.appendChild(valueDiv);
-        detailsDiv.appendChild(itemDiv);
-      }
-    });
-    
-    Object.keys(record).forEach(function(key) {
-      if (key !== 'Name' && key !== 'Position' && key !== 'Status' && key !== 'Notes' && !orderedFields.includes(key) && record[key]) {
-        var itemDiv = document.createElement('div');
-        itemDiv.className = 'detail-item';
-        var labelDiv = document.createElement('div');
-        labelDiv.className = 'detail-label';
-        labelDiv.textContent = key;
-        var valueDiv = document.createElement('div');
-        valueDiv.className = 'detail-value';
-        valueDiv.textContent = record[key];
-        itemDiv.appendChild(labelDiv);
-        itemDiv.appendChild(valueDiv);
-        detailsDiv.appendChild(itemDiv);
-      }
-    });
-    
-    recordDiv.appendChild(detailsDiv);
-    
-    var noteSection = document.createElement('div');
-    noteSection.className = 'note-section';
-    
-    if (record.Notes) {
-      var noteDisplay = document.createElement('div');
-      noteDisplay.className = 'note-display';
-      noteDisplay.innerHTML = `<div class="note-label"><span class="material-icons">note</span> Note:</div><div class="note-text">${record.Notes}</div>`;
-      noteSection.appendChild(noteDisplay);
-    }
-    
-    var noteActions = document.createElement('div');
-    noteActions.className = 'note-actions';
-    
-    if (record.Notes) {
-      var editNoteButton = document.createElement('button');
-      editNoteButton.className = 'note-button edit-note-button';
-      editNoteButton.dataset.name = record.Name;
-      editNoteButton.innerHTML = '<span class="material-icons">edit</span> Edit Note';
-      var deleteNoteButton = document.createElement('button');
-      deleteNoteButton.className = 'note-button delete-note-button';
-      deleteNoteButton.dataset.name = record.Name;
-      deleteNoteButton.innerHTML = '<span class="material-icons">delete</span> Delete Note';
-      noteActions.appendChild(editNoteButton);
-      noteActions.appendChild(deleteNoteButton);
-    } else {
-      var addNoteButton = document.createElement('button');
-      addNoteButton.className = 'note-button add-note-button';
-      addNoteButton.dataset.name = record.Name;
-      addNoteButton.innerHTML = '<span class="material-icons">note_add</span> Add Note';
-      noteActions.appendChild(addNoteButton);
-    }
-    
-    noteSection.appendChild(noteActions);
-    recordDiv.appendChild(noteSection);
-    
-    var actionsDiv = document.createElement('div');
-    actionsDiv.className = 'record-actions';
-    
-    var pullOutButton = document.createElement('button');
-    pullOutButton.className = 'action-button pull-out-button';
-    pullOutButton.dataset.name = record.Name;
-    pullOutButton.innerHTML = '<span class="material-icons">file_download</span> Pull Out';
-    if (record.Status === "Pulled Out") {
-      pullOutButton.disabled = true;
-      pullOutButton.title = "File is already pulled out";
-    }
-    
-    var returnButton = document.createElement('button');
-    returnButton.className = 'action-button return-button';
-    returnButton.dataset.name = record.Name;
-    returnButton.innerHTML = '<span class="material-icons">file_upload</span> Return';
-    if (record.Status !== "Pulled Out") {
-      returnButton.disabled = true;
-      returnButton.title = "File is already in filing";
-    }
-    
-    actionsDiv.appendChild(pullOutButton);
-    actionsDiv.appendChild(returnButton);
-    recordDiv.appendChild(actionsDiv);
+    const recordDiv = createRecordCard(record);
     container.appendChild(recordDiv);
   });
   
-  // Add event listeners
-  const pullOutButtons = document.querySelectorAll('.pull-out-button:not([disabled])');
-  pullOutButtons.forEach(button => {
+  // Add event listeners to action buttons
+  attachButtonListeners();
+}
+
+function createRecordCard(record) {
+  const recordDiv = document.createElement('div');
+  recordDiv.className = 'record-card';
+  if (record.Status === "Pulled Out") {
+    recordDiv.classList.add('pulled-out');
+  }
+  
+  // Create header
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'record-header';
+  
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'record-name';
+  nameDiv.innerHTML = `<span class="material-icons">person</span> ${record.Name || 'Unnamed Record'}`;
+  if (record.Position) {
+    nameDiv.innerHTML += `<span class="position-badge">${record.Position}</span>`;
+  }
+  
+  const statusDiv = document.createElement('div');
+  if (record.Status === "Pulled Out") {
+    statusDiv.className = 'status-badge status-pulled-out';
+    statusDiv.innerHTML = '<span class="material-icons">folder_open</span> Pulled Out';
+  } else {
+    statusDiv.className = 'status-badge status-in-filing';
+    statusDiv.innerHTML = '<span class="material-icons">folder</span> In Filing';
+  }
+  
+  headerDiv.appendChild(nameDiv);
+  headerDiv.appendChild(statusDiv);
+  recordDiv.appendChild(headerDiv);
+  
+  // Create details section
+  const detailsDiv = document.createElement('div');
+  detailsDiv.className = 'record-details';
+  
+  const orderedFields = ['Storage Area', 'Level', 'Partition'];
+  orderedFields.forEach(function(fieldName) {
+    if (record[fieldName]) {
+      const itemDiv = createDetailItem(fieldName, record[fieldName]);
+      detailsDiv.appendChild(itemDiv);
+    }
+  });
+  
+  // Add other fields
+  Object.keys(record).forEach(function(key) {
+    if (key !== 'Name' && key !== 'Position' && key !== 'Status' && key !== 'Notes' && 
+        !orderedFields.includes(key) && record[key]) {
+      const itemDiv = createDetailItem(key, record[key]);
+      detailsDiv.appendChild(itemDiv);
+    }
+  });
+  
+  recordDiv.appendChild(detailsDiv);
+  
+  // Create note section
+  const noteSection = createNoteSection(record);
+  recordDiv.appendChild(noteSection);
+  
+  // Create actions section
+  const actionsDiv = createActionsSection(record);
+  recordDiv.appendChild(actionsDiv);
+  
+  return recordDiv;
+}
+
+function createDetailItem(label, value) {
+  const itemDiv = document.createElement('div');
+  itemDiv.className = 'detail-item';
+  
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'detail-label';
+  labelDiv.textContent = label;
+  
+  const valueDiv = document.createElement('div');
+  valueDiv.className = 'detail-value';
+  
+  if (label === 'Storage Area') {
+    valueDiv.innerHTML = `
+      <span class="storage-badge">
+        <span class="material-icons" style="font-size: 16px; vertical-align: middle;">inventory_2</span> 
+        ${value}
+      </span>
+    `;
+  } else {
+    valueDiv.textContent = value;
+  }
+  
+  itemDiv.appendChild(labelDiv);
+  itemDiv.appendChild(valueDiv);
+  return itemDiv;
+}
+
+function createNoteSection(record) {
+  const noteSection = document.createElement('div');
+  noteSection.className = 'note-section';
+  
+  if (record.Notes) {
+    const noteDisplay = document.createElement('div');
+    noteDisplay.className = 'note-display';
+    noteDisplay.innerHTML = `
+      <div class="note-label"><span class="material-icons">note</span> Note:</div>
+      <div class="note-text">${record.Notes}</div>
+    `;
+    noteSection.appendChild(noteDisplay);
+  }
+  
+  const noteActions = document.createElement('div');
+  noteActions.className = 'note-actions';
+  
+  if (record.Notes) {
+    const editNoteButton = document.createElement('button');
+    editNoteButton.className = 'note-button edit-note-button';
+    editNoteButton.dataset.name = record.Name;
+    editNoteButton.dataset.noteText = record.Notes;
+    editNoteButton.innerHTML = '<span class="material-icons">edit</span> Edit Note';
+    
+    const deleteNoteButton = document.createElement('button');
+    deleteNoteButton.className = 'note-button delete-note-button';
+    deleteNoteButton.dataset.name = record.Name;
+    deleteNoteButton.innerHTML = '<span class="material-icons">delete</span> Delete Note';
+    
+    noteActions.appendChild(editNoteButton);
+    noteActions.appendChild(deleteNoteButton);
+  } else {
+    const addNoteButton = document.createElement('button');
+    addNoteButton.className = 'note-button add-note-button';
+    addNoteButton.dataset.name = record.Name;
+    addNoteButton.innerHTML = '<span class="material-icons">note_add</span> Add Note';
+    noteActions.appendChild(addNoteButton);
+  }
+  
+  noteSection.appendChild(noteActions);
+  return noteSection;
+}
+
+function createActionsSection(record) {
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'record-actions';
+  
+  const pullOutButton = document.createElement('button');
+  pullOutButton.className = 'action-button pull-out-button';
+  pullOutButton.dataset.name = record.Name;
+  pullOutButton.innerHTML = '<span class="material-icons">file_download</span> Pull Out';
+  
+  if (record.Status === "Pulled Out") {
+    pullOutButton.disabled = true;
+    pullOutButton.title = "File is already pulled out";
+  }
+  
+  const returnButton = document.createElement('button');
+  returnButton.className = 'action-button return-button';
+  returnButton.dataset.name = record.Name;
+  returnButton.innerHTML = '<span class="material-icons">file_upload</span> Return';
+  
+  if (record.Status !== "Pulled Out") {
+    returnButton.disabled = true;
+    returnButton.title = "File is already in filing";
+  }
+  
+  actionsDiv.appendChild(pullOutButton);
+  actionsDiv.appendChild(returnButton);
+  
+  return actionsDiv;
+}
+
+function attachButtonListeners() {
+  // Pull out buttons
+  document.querySelectorAll('.pull-out-button:not([disabled])').forEach(button => {
     button.addEventListener('click', function() {
       openPullOutModal(this.dataset.name);
     });
   });
   
-  const returnButtons = document.querySelectorAll('.return-button:not([disabled])');
-  returnButtons.forEach(button => {
+  // Return buttons
+  document.querySelectorAll('.return-button:not([disabled])').forEach(button => {
     button.addEventListener('click', function() {
       openReturnModal(this.dataset.name);
     });
   });
   
-  const addNoteButtons = document.querySelectorAll('.add-note-button');
-  addNoteButtons.forEach(button => {
+  // Add note buttons
+  document.querySelectorAll('.add-note-button').forEach(button => {
     button.addEventListener('click', function() {
       openNoteModal(this.dataset.name, 'Add', '');
     });
   });
   
-  const editNoteButtons = document.querySelectorAll('.edit-note-button');
-  editNoteButtons.forEach(button => {
-    const noteText = button.closest('.record-card').querySelector('.note-text').textContent;
+  // Edit note buttons
+  document.querySelectorAll('.edit-note-button').forEach(button => {
     button.addEventListener('click', function() {
-      openNoteModal(this.dataset.name, 'Edit', noteText);
+      openNoteModal(this.dataset.name, 'Edit', this.dataset.noteText);
     });
   });
   
-  const deleteNoteButtons = document.querySelectorAll('.delete-note-button');
-  deleteNoteButtons.forEach(button => {
+  // Delete note buttons
+  document.querySelectorAll('.delete-note-button').forEach(button => {
     button.addEventListener('click', function() {
       if (confirm('Are you sure you want to delete this note?')) {
         deleteNote(this.dataset.name);
@@ -452,47 +529,80 @@ function showResults(response) {
 }
 
 function showLoading() {
-  var container = document.getElementById('resultsContainer');
-  if (container) {
-    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    document.getElementById('resultsCount').style.display = 'none';
-    document.getElementById('sheetInfo').textContent = '';
-  }
+  const container = document.getElementById('resultsContainer');
+  if (!container) return;
+  
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  
+  const resultsCount = document.getElementById('resultsCount');
+  if (resultsCount) resultsCount.style.display = 'none';
+  
+  const sheetInfo = document.getElementById('sheetInfo');
+  if (sheetInfo) sheetInfo.textContent = '';
 }
 
+// Modal Functions
 function openPullOutModal(name) {
   currentRecordName = name;
-  document.getElementById('pullOutName').value = name;
-  document.getElementById('pullOutModal').style.display = 'block';
-  document.getElementById('pulledOutBy').focus();
+  const nameField = document.getElementById('pullOutName');
+  if (nameField) nameField.value = name;
+  
+  const modal = document.getElementById('pullOutModal');
+  if (modal) modal.style.display = 'block';
+  
+  const focusField = document.getElementById('pulledOutBy');
+  if (focusField) focusField.focus();
 }
 
 function openReturnModal(name) {
   currentRecordName = name;
-  document.getElementById('returnName').value = name;
-  document.getElementById('returnModal').style.display = 'block';
-  document.getElementById('returnedBy').focus();
+  const nameField = document.getElementById('returnName');
+  if (nameField) nameField.value = name;
+  
+  const modal = document.getElementById('returnModal');
+  if (modal) modal.style.display = 'block';
+  
+  const focusField = document.getElementById('returnedBy');
+  if (focusField) focusField.focus();
 }
 
 function openNoteModal(name, action, noteText = '') {
   currentRecordName = name;
-  document.getElementById('noteName').value = name;
-  document.getElementById('noteText').value = noteText;
-  document.getElementById('noteModalTitle').textContent = action + ' Note';
-  document.getElementById('noteModal').style.display = 'block';
-  document.getElementById('noteText').focus();
+  
+  const nameField = document.getElementById('noteName');
+  if (nameField) nameField.value = name;
+  
+  const textField = document.getElementById('noteText');
+  if (textField) textField.value = noteText;
+  
+  const title = document.getElementById('noteModalTitle');
+  if (title) title.textContent = action + ' Note';
+  
+  const modal = document.getElementById('noteModal');
+  if (modal) modal.style.display = 'block';
+  
+  if (textField) textField.focus();
 }
 
 function closeModal(modalId) {
-  document.getElementById(modalId).style.display = 'none';
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  
+  modal.style.display = 'none';
+  
   if (modalId === 'pullOutModal') {
-    document.getElementById('pullOutForm').reset();
-    document.getElementById('pullOutDate').valueAsDate = new Date();
+    const form = document.getElementById('pullOutForm');
+    if (form) form.reset();
+    const dateField = document.getElementById('pullOutDate');
+    if (dateField) dateField.valueAsDate = new Date();
   } else if (modalId === 'returnModal') {
-    document.getElementById('returnForm').reset();
-    document.getElementById('returnDate').valueAsDate = new Date();
+    const form = document.getElementById('returnForm');
+    if (form) form.reset();
+    const dateField = document.getElementById('returnDate');
+    if (dateField) dateField.valueAsDate = new Date();
   } else if (modalId === 'noteModal') {
-    document.getElementById('noteForm').reset();
+    const form = document.getElementById('noteForm');
+    if (form) form.reset();
   }
 }
 
@@ -503,6 +613,7 @@ function showSuccessMessage(message) {
   const successDiv = document.createElement('div');
   successDiv.className = 'success-message';
   successDiv.innerHTML = `<span class="material-icons">check_circle</span> ${message}`;
+  
   container.insertBefore(successDiv, container.firstChild);
   
   setTimeout(() => {
@@ -516,6 +627,7 @@ function showSuccessMessage(message) {
   }, 5000);
 }
 
+// Autocomplete Functions
 function showAutocomplete(inputValue) {
   const dropdown = document.getElementById('autocompleteDropdown');
   if (!dropdown) return;
@@ -554,9 +666,11 @@ function showAutocomplete(inputValue) {
       
       item.appendChild(icon);
       item.appendChild(text);
+      
       item.addEventListener('click', function() {
         selectAutocompleteItem(index);
       });
+      
       dropdown.appendChild(item);
     });
   }
@@ -568,15 +682,18 @@ function hideAutocomplete() {
   const dropdown = document.getElementById('autocompleteDropdown');
   if (dropdown) {
     dropdown.style.display = 'none';
-    selectedIndex = -1;
   }
+  selectedIndex = -1;
 }
 
 function selectAutocompleteItem(index) {
   const items = document.querySelectorAll('.autocomplete-item');
   if (items && items[index]) {
     const name = items[index].dataset.name;
-    document.getElementById('searchInput').value = name;
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.value = name;
+    }
     hideAutocomplete();
     performSearch();
   }
@@ -602,6 +719,7 @@ function navigateAutocomplete(direction) {
   items[selectedIndex].scrollIntoView({ block: 'nearest' });
 }
 
+// Close modals on outside click
 window.onclick = function(event) {
   if (event.target.classList.contains('modal')) {
     event.target.style.display = 'none';

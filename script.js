@@ -1,6 +1,6 @@
 // =================== CONFIGURATION ===================
 // PASTE YOUR NEW API URL HERE
-const API_URL = 'https://script.google.com/macros/s/AKfycbxdjZ0Q_4-COR0UW14oGkKTtki7o4LBMYXRIjtg2jcm4CJnxIORmypgWhEYjYx5dDaF/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwNS1GFrCBV8uvkqnYarlmUzhx_leQDk1jp5fCHCBazr-dpSRPHGdOQN0a04zJt8Hqv/exec';
 
 // =================== GLOBAL VARIABLES ===================
 let allNames = [];

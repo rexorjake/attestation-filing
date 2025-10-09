@@ -1,7 +1,7 @@
 // =================== CONFIGURATION ===================
 // PASTE YOUR NEW API URL HERE
 // This URL must be the 'exec' URL from your deployed Google Apps Script Web App.
-const API_URL = 'https://script.google.com/macros/s/AKfycbxL0tzzF3RNGotaoSZAeb5gvDJ_q439YWgj1w4D86g3ghKVEtCIt6qOXTRckiRNDbariQ/exec'; // <<< REMEMBER TO UPDATE THIS!
+const API_URL = 'https://script.google.com/macros/s/AKfycbzuze5mIwq_w8G1MxR93KsmYjutgx_JT5EbaXG179OFTghNRmvGidrD51PeU-98szAy_A/exec'; // <<< REMEMBER TO UPDATE THIS!
 
 // =================== GLOBAL VARIABLES ===================
 let allNames = [];

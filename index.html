@@ -1,59 +1,55 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <!-- PASTE YOUR ENTIRE <body> CONTENT FROM YOUR ORIGINAL HTML HERE -->
-    <div class="app-header">
-      <div class="app-title">
-        <span class="material-icons" style="font-size: 36px; color: var(--primary);">folder_shared</span>
-        BOC Attestation Filing System
-      </div>
-      <div class="app-subtitle">Search and manage personnel files efficiently</div>
-    </div>
-    
-    <div class="app-container">
-      <div class="search-section">
-        <div class="search-header">Search Personnel Files</div>
-        <div class="search-box">
-          <span class="material-icons search-icon">search</span>
-          <div class="autocomplete-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="Enter name to search..." autocomplete="off">
-            <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
-          </div>
-          <button id="searchButton" class="search-button">
-            <span class="material-icons">search</span>
-            Search
-          </button>
-        </div>
-      </div>
-      
-      <div class="results-section">
-        <div class="results-header">
-          <span class="material-icons">description</span>
-          Search Results
-          <span id="resultsCount" class="results-count" style="display: none;">0</span>
-          <span id="sheetInfo" class="sheet-info"></span>
-        </div>
-        <div id="resultsContainer"></div>
-      </div>
-    </div>
-    
-    <div class="app-footer">
-      © 2025 BOC Employee Search System | App Developed by Rexor Jake Saluib
-    </div>
-    
-    <!-- PASTE ALL YOUR MODALS HERE (Pull Out, Return, Note) -->
-    <!-- ... copy all the modal divs from your original HTML ... -->
-    <div id="pullOutModal" class="modal">...</div>
-    <div id="returnModal" class="modal">...</div>
-    <div id="noteModal" class="modal">...</div>
+<head>
+  <title>Google Sheet Web App</title>
+</head>
+<body>
+  <h1>Contact Form</h1>
 
-    <!-- Link to your new JavaScript file at the end -->
-    <script src="script.js"></script>
-  </body>
+  <form id="form">
+    <input type="text" id="name" placeholder="Name" required><br>
+    <input type="email" id="email" placeholder="Email" required><br>
+    <textarea id="message" placeholder="Message"></textarea><br>
+    <button type="submit">Submit</button>
+  </form>
+
+  <h2>Entries:</h2>
+  <ul id="output"></ul>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyGRXgKD-F2tOWhitq2484omfirmFIm9YluRjsmQ3UYQymK35hTd1zzJAnYA51bK9Ly_A/exec';
+
+    // Handle form submit (POST)
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        message: document.getElementById('message').value
+      };
+
+      await fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+
+      alert('Submitted!');
+      e.target.reset();
+      loadData(); // reload data
+    });
+
+    // Load data (GET)
+    async function loadData() {
+      const res = await fetch(scriptURL);
+      const data = await res.json();
+      const output = document.getElementById('output');
+      output.innerHTML = '';
+      data.forEach(item => {
+        output.innerHTML += `<li><b>${item.Name}</b>: ${item.Message}</li>`;
+      });
+    }
+
+    loadData();
+  </script>
+</body>
 </html>

@@ -1,5 +1,5 @@
 // =================== CONFIGURATION ===================
-const API_URL = 'https://script.google.com/macros/s/AKfycbzTL8yDwkz1ifNBotKrM7cC9VrKDeNfHxU9jKmSN34rIveAGkrzxy5iC7wsBRirRlILoA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzZ680q14qizbnWe9mx0GoWM8r8_uNfunLttSEeyfoGd7jNyC1ORHdM54siDPYQ2clpkA/exec';
 
 // =================== GLOBAL VARIABLES ===================
 let allNames = [];

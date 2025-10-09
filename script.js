@@ -8,32 +8,35 @@ let selectedIndex = -1;
 let currentRecordName = '';
 
 // =================== API CALLING FUNCTION ===================
-// This function is modified to handle the HTML-wrapped JSON response from Apps Script.
+// =================== API CALLING FUNCTION ===================
+// This version is more robust and simplifies how the URL is built.
 async function callApi(path, method = 'GET', data = null) {
-  const url = new URL(API_URL);
-  url.searchParams.append('path', path);
+  // Build the URL as a simple string. This is more reliable.
+  let url = `${API_URL}?path=${path}`;
+  
+  if (method === 'GET' && data) {
+    // For GET requests, append data directly to the URL string.
+    for (const key in data) {
+      url += `&${key}=${encodeURIComponent(data[key])}`;
+    }
+  }
 
   const options = {
     method: method,
     headers: { 'Content-Type': 'application/json' },
   };
 
-  if (method === 'GET' && data) {
-    Object.keys(data).forEach(key => url.searchParams.append(key, data[key]));
-  } else if (method === 'POST' && data) {
+  if (method === 'POST' && data) {
     options.body = JSON.stringify(data);
   }
 
-  console.log(`Calling API: ${method} ${url}`); // Debugging log
+  console.log("Final URL being fetched:", url); // Debugging log
 
   try {
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
     
-    // The response is now HTML, so we get it as text
     const responseText = await response.text();
-    
-    // We extract the JSON from inside the <script> tag
     const jsonString = responseText.match(/<script>(.*?)<\/script>/)[1];
     
     const responseData = JSON.parse(jsonString);
@@ -41,9 +44,8 @@ async function callApi(path, method = 'GET', data = null) {
     return responseData;
   } catch (error) {
     console.error('API Call Failed:', error);
-    // Show a more user-friendly error on the page
     showResults([{ error: `Connection failed: ${error.message}. Check console.` }]);
-    throw error; // Re-throw to stop further processing
+    throw error;
   }
 }
 

@@ -1,55 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Google Sheet Web App</title>
+  <meta charset="UTF-8" />
+  <title>Sheet CRUD Demo</title>
 </head>
 <body>
-  <h1>Contact Form</h1>
+  <h2>Google Sheets CRUD Example</h2>
 
-  <form id="form">
-    <input type="text" id="name" placeholder="Name" required><br>
-    <input type="email" id="email" placeholder="Email" required><br>
-    <textarea id="message" placeholder="Message"></textarea><br>
-    <button type="submit">Submit</button>
-  </form>
+  <input id="name" placeholder="Name">
+  <input id="email" placeholder="Email">
+  <input id="message" placeholder="Message">
+  <button onclick="addData()">Add</button>
 
-  <h2>Entries:</h2>
-  <ul id="output"></ul>
+  <h3>Data:</h3>
+  <div id="output"></div>
 
   <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxco2mjZwZCyEeR0IE07BCAUjvXw5O83ufpFZpX3Lgv1ZPJn6B5deTAlvRUfj7UA1rfdw/exec';
+    const api = "YOUR_WEB_APP_URL_HERE";
 
-    // Handle form submit (POST)
-    document.getElementById('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        message: document.getElementById('message').value
-      };
-
-      await fetch(scriptURL, {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-
-      alert('Submitted!');
-      e.target.reset();
-      loadData(); // reload data
-    });
-
-    // Load data (GET)
-    async function loadData() {
-      const res = await fetch(scriptURL);
-      const data = await res.json();
-      const output = document.getElementById('output');
-      output.innerHTML = '';
-      data.forEach(item => {
-        output.innerHTML += `<li><b>${item.Name}</b>: ${item.Message}</li>`;
-      });
+    function fetchData() {
+      fetch(api)
+        .then(res => res.json())
+        .then(data => {
+          const html = data.map(row => `
+            <div>
+              <b>${row.Name}</b> (${row.Email}) — ${row.Message}
+              <button onclick="editData(${row.ID})">✏️</button>
+              <button onclick="deleteData(${row.ID})">🗑️</button>
+            </div>
+          `).join('');
+          document.getElementById("output").innerHTML = html;
+        });
     }
 
-    loadData();
+    function addData() {
+      const body = {
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        message: document.getElementById("message").value
+      };
+
+      fetch(api, {
+        method: "POST",
+        body: JSON.stringify(body)
+      }).then(res => res.text()).then(() => fetchData());
+    }
+
+    function editData(id) {
+      const name = prompt("New name:");
+      const email = prompt("New email:");
+      const message = prompt("New message:");
+
+      const body = { id, name, email, message };
+
+      fetch(api, {
+        method: "PUT",
+        body: JSON.stringify(body)
+      }).then(res => res.text()).then(() => fetchData());
+    }
+
+    function deleteData(id) {
+      fetch(`${api}?id=${id}`, { method: "DELETE" })
+        .then(res => res.text())
+        .then(() => fetchData());
+    }
+
+    fetchData(); // load data on start
   </script>
 </body>
 </html>
